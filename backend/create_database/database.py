@@ -12,6 +12,7 @@ class Prefecture(SQLModel, table=True):
     # JISコード(1~47)をそのままIDとして使うため、自動採番(default=None)はしません
     id: int = Field(primary_key=True) 
     name: str = Field(index=True, unique=True)
+    area: float = Field(default=0.0)  # 面積(km2)
 
 # --- 日別データ ---
 class DailySnow(SQLModel, table=True):

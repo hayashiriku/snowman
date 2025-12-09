@@ -14,7 +14,7 @@ JIS_MAP = {
     "宮崎県": 45, "鹿児島県": 46, "沖縄県": 47
 }
 
-def get_or_create_prefecture(session: Session, pref_name: str) -> int:
+def get_or_create_prefecture(session: Session, pref_name: str, area: float) -> int:
     """県名からJISコードを使ってマスタ登録し、IDを返す"""
     
     # 1. JISコード表からIDを探す
@@ -25,21 +25,24 @@ def get_or_create_prefecture(session: Session, pref_name: str) -> int:
     # 2. すでにDBにあるか確認
     pref = session.get(Prefecture, jis_id)
     if pref:
+        pref.area = area
+        session.add(pref)
+        session.commit()
         return pref.id
     
     # 3. 未登録なら作成
-    new_pref = Prefecture(id=jis_id, name=pref_name)
+    new_pref = Prefecture(id=jis_id, name=pref_name, area=area)
     session.add(new_pref)
     session.commit()
     return new_pref.id
 
-def import_prefecture_data(pref_name: str, daily_csv_path: str, monthly_csv_path: str):
+def import_prefecture_data(pref_name: str, area: float, daily_csv_path: str, monthly_csv_path: str):
     print(f"=== {pref_name} のデータ移行を開始します ===")
 
     with Session(engine) as session:
         try:
             # マスタ登録してID取得
-            pref_id = get_or_create_prefecture(session, pref_name)
+            pref_id = get_or_create_prefecture(session, pref_name, area)
             print(f"-> JISコード: {pref_id} ({pref_name}) を使用します")
 
             # --- 日別データ ---
@@ -77,4 +80,9 @@ def import_prefecture_data(pref_name: str, daily_csv_path: str, monthly_csv_path
 if __name__ == "__main__":
     create_db_and_tables()
     # ここを実行するだけで、長野県が ID:20 として登録されます
-    import_prefecture_data("長野県", "/Users/riku/snowman/backend/create_database/data/nagano.csv", "/Users/riku/snowman/backend/create_database/data/ngano-mon.csv")
+    import_prefecture_data(
+        pref_name="長野県",
+        area=13562.0, 
+        daily_csv_path="~/snowman/backend/create_database/data/nagano.csv",
+        monthly_csv_path="~/snowman/backend/create_database/data/nagano-mon.csv"
+    )

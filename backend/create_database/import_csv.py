@@ -81,8 +81,8 @@ if __name__ == "__main__":
     create_db_and_tables()
     # ここを実行するだけで、長野県が ID:20 として登録されます
     import_prefecture_data(
-        pref_name="長野県",
-        area=13562.0, 
-        daily_csv_path="~/snowman/backend/create_database/data/nagano.csv",
-        monthly_csv_path="~/snowman/backend/create_database/data/nagano-mon.csv"
+        pref_name="大阪府",
+        area=1905, 
+        daily_csv_path="~/snowman/backend/create_database/data/osaka.csv",
+        monthly_csv_path="~/snowman/backend/create_database/data/osaka-mon.csv"
     )

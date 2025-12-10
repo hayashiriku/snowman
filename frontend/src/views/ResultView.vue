@@ -68,8 +68,9 @@ const pixelPerMeter = computed(() => {
   
   const h = result.value.height_m
   
-  // 雪だるまを画面の7〜8割くらいの高さに表示
-  // ただし、小さすぎる場合でも最低「3メートル」分の空間は映す (寄りすぎ防止)
+  // 余計な「最低500m」などの制限を撤廃しました。
+  // 雪だるまの高さの1.3倍の範囲を画面に収めます。
+  // (ただし、1m以下の小さすぎる時だけバグ防止で最低3mは確保します)
   const viewHeightMeters = Math.max(h * 1.3, 3.0) 
   
   return STAGE_HEIGHT_PX / viewHeightMeters

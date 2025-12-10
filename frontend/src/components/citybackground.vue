@@ -1,4 +1,6 @@
 <script setup>
+import { computed } from 'vue'
+
 defineProps({
   scale: {
     type: Number,
@@ -6,56 +8,83 @@ defineProps({
   }
 })
 
-// --- 1. 山 (一番奥) ---
-const mountains = [
-  { id: 'm1', heightM: 400, widthM: 700, color: '#90a4ae', left: '-15%', zIndex: 1 },
-  { id: 'm2', heightM: 650, widthM: 900, color: '#78909c', left: '30%',  zIndex: 2 },
-  { id: 'm3', heightM: 350, widthM: 600, color: '#90a4ae', left: '75%',  zIndex: 1 },
-]
+// --- ユーティリティ: ランダム生成用関数 ---
+// 最小値と最大値の間のランダムな数を返す
+const random = (min, max) => Math.random() * (max - min) + min
+// 最小値と最大値の間のランダムな整数を返す
+const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
+// 配列からランダムに1つ選ぶ
+const randomPick = (arr) => arr[Math.floor(Math.random() * arr.length)]
 
-// --- 2. 遠景の摩天楼 (奥) ---
-const farBuildings = [
-  { id: 'f1', heightM: 280, widthM: 50, left: '2%' },
-  { id: 'f2', heightM: 320, widthM: 60, left: '8%' },
-  { id: 'f3', heightM: 250, widthM: 45, left: '18%' },
-  { id: 'f4', heightM: 350, widthM: 70, left: '25%' },
-  { id: 'f5', heightM: 290, widthM: 55, left: '38%' },
-  { id: 'f6', heightM: 220, widthM: 40, left: '50%' },
-  { id: 'f7', heightM: 310, widthM: 65, left: '58%' },
-  { id: 'f8', heightM: 260, widthM: 50, left: '72%' },
-  { id: 'f9', heightM: 340, widthM: 60, left: '82%' },
-  { id: 'f10', heightM: 270, widthM: 45, left: '92%' },
+// --- 1. 山 (自動生成: 15個) ---
+const mountainColors = ['#1b5e20', // かなり深い緑
+  '#2e7d32', // 濃い緑
+  '#43a047', // 普通の緑
+  '#689f38', // オリーブっぽい緑
+  '#7cb342', // 草色
+  '#8bc34a', // 黄緑
+  '#9ccc65'  // 明るい黄緑
 ]
+// Array.from({ length: 15 }) で15個のデータを作成
+const mountains = Array.from({ length: 15 }).map((_, i) => ({
+  id: `m-${i}`,
+  heightM: random(300, 800), // 高さを300m〜800mの間でランダムに
+  widthM: random(500, 1200), // 幅をランダムに
+  color: randomPick(mountainColors),
+  left: `${random(-20, 100)}%`, // 画面外の左(-20%)から右(100%)までランダム配置
+  zIndex: randomInt(1, 3)
+})).sort((a, b) => a.heightM - b.heightM) // 低い山を手前にするためにソート（お好みで）
 
-// --- 3. 中景のオフィスビル (中) ---
-const midBuildings = [
-  { id: 'md1', heightM: 150, widthM: 70, left: '5%',  color: '#b0bec5' },
-  { id: 'md2', heightM: 180, widthM: 50, left: '15%', color: '#cfd8dc' },
-  { id: 'md3', heightM: 130, widthM: 80, left: '28%', color: '#b0bec5' },
-  { id: 'md4', heightM: 200, widthM: 60, left: '42%', color: '#cfd8dc' },
-  { id: 'md5', heightM: 160, widthM: 75, left: '55%', color: '#b0bec5' },
-  { id: 'md6', heightM: 190, widthM: 55, left: '70%', color: '#cfd8dc' },
-  { id: 'md7', heightM: 140, widthM: 65, left: '85%', color: '#b0bec5' },
-]
+// --- 2. 遠景の摩天楼 (自動生成: 50個) ---
+const farBuildings = Array.from({ length: 50 }).map((_, i) => ({
+  id: `f-${i}`,
+  heightM: random(200, 450),
+  widthM: random(40, 80),
+  left: `${random(0, 100)}%`,
+  zIndex: randomInt(1, 5) // 奥の中で多少前後させる
+}))
 
-// --- 4. 近景の住宅・商店 (手前) ---
-const nearBuildings = [
-  { id: 'n1', type: 'flat', heightM: 80, widthM: 40, left: '3%', color: '#ffcc80', win: 'grid' },
-  { id: 'n2', type: 'shop', heightM: 25, widthM: 50, left: '12%', color: '#ef5350', roof: '#c62828' },
-  { id: 'n3', type: 'flat', heightM: 60, widthM: 35, left: '22%', color: '#81d4fa', win: 'glass' },
-  { id: 'n4', type: 'house', heightM: 15, widthM: 25, left: '35%', color: '#fff59d', roof: '#fbc02d' },
-  { id: 'n5', type: 'house', heightM: 20, widthM: 30, left: '45%', color: '#a5d6a7', roof: '#388e3c' },
-  { id: 'n6', type: 'shop',  heightM: 30, widthM: 40, left: '55%', color: '#ffab91', roof: '#d84315' },
-  { id: 'n7', type: 'house', heightM: 18, widthM: 28, left: '70%', color: '#b39ddb', roof: '#5e35b1' },
-  { id: 'n8', type: 'flat',  heightM: 50, widthM: 30, left: '80%', color: '#90caf9', win: 'grid' },
-  { id: 'n9', type: 'house', heightM: 12, widthM: 20, left: '90%', color: '#ffcc80', roof: '#e65100' },
-]
+// --- 3. 中景のオフィスビル (自動生成: 35個) ---
+const midColors = ['#b0bec5', '#cfd8dc', '#90a4ae']
+const midBuildings = Array.from({ length: 35 }).map((_, i) => ({
+  id: `md-${i}`,
+  heightM: random(120, 250),
+  widthM: random(50, 100),
+  left: `${random(0, 100)}%`,
+  color: randomPick(midColors)
+}))
+
+// --- 4. 近景の住宅・商店 (自動生成: 45個) ---
+const nearColors = ['#ffcc80', '#ef5350', '#81d4fa', '#fff59d', '#a5d6a7', '#ffab91', '#b39ddb', '#90caf9']
+const roofColors = ['#c62828', '#fbc02d', '#388e3c', '#d84315', '#5e35b1', '#e65100', '#1565c0']
+const types = ['flat', 'shop', 'house', 'house', 'flat'] // house多めに設定
+
+const nearBuildings = Array.from({ length: 45 }).map((_, i) => {
+  const type = randomPick(types)
+  // 画面全体に散らばるようにベース位置を決めて、少し揺らぎ(jitter)を与える
+  const baseLeft = (i / 45) * 100
+  const jitter = random(-2, 2)
+  
+  return {
+    id: `n-${i}`,
+    type: type,
+    heightM: type === 'flat' ? random(40, 100) : random(10, 30), // ビルなら高く、家なら低く
+    widthM: random(20, 45),
+    left: `${Math.max(0, Math.min(100, baseLeft + jitter))}%`,
+    color: randomPick(nearColors),
+    roof: randomPick(roofColors), // 屋根の色
+    win: randomPick(['grid', 'glass', 'normal']), // 窓タイプ
+    zIndex: randomInt(10, 20)
+  }
+})
+// 手前の小さい順、あるいはランダムに並び替えて、自然な重なりを作る
+.sort(() => Math.random() - 0.5)
+
 </script>
 
 <template>
   <div class="city-container">
     <div class="sky"></div>
-
     <div class="sun"></div>
 
     <div class="cloud-layer">
@@ -77,22 +106,53 @@ const nearBuildings = [
     </div>
 
     <div class="layer far-layer">
-      <div v-for="b in farBuildings" :key="b.id" class="building far" :style="{ height: (b.heightM * scale)+'px', width: (b.widthM * scale)+'px', left: b.left }"></div>
+      <div 
+        v-for="b in farBuildings" :key="b.id" 
+        class="building far" 
+        :style="{ 
+          height: (b.heightM * scale)+'px', 
+          width: (b.widthM * scale)+'px', 
+          left: b.left,
+          zIndex: b.zIndex
+        }"
+      ></div>
     </div>
 
     <div class="layer mid-layer">
-      <div v-for="b in midBuildings" :key="b.id" class="building mid" :style="{ height: (b.heightM * scale)+'px', width: (b.widthM * scale)+'px', left: b.left, backgroundColor: b.color }"><div class="mid-windows"></div></div>
+      <div 
+        v-for="b in midBuildings" :key="b.id" 
+        class="building mid" 
+        :style="{ 
+          height: (b.heightM * scale)+'px', 
+          width: (b.widthM * scale)+'px', 
+          left: b.left, 
+          backgroundColor: b.color 
+        }"
+      ><div class="mid-windows"></div></div>
     </div>
 
     <div class="layer near-layer">
-      <div v-for="b in nearBuildings" :key="b.id" class="building near" :style="{ height: (b.heightM * scale)+'px', width: (b.widthM * scale)+'px', left: b.left, backgroundColor: b.color }">
+      <div 
+        v-for="b in nearBuildings" :key="b.id" 
+        class="building near" 
+        :style="{ 
+          height: (b.heightM * scale)+'px', 
+          width: (b.widthM * scale)+'px', 
+          left: b.left, 
+          backgroundColor: b.color,
+          zIndex: b.zIndex
+        }"
+      >
         <div v-if="b.type === 'house'" class="roof triangle" :style="{ borderBottomColor: b.roof, bottom: (b.heightM * scale)+'px' }"></div>
         <div v-if="b.type === 'shop'" class="roof trapezoid" :style="{ borderBottomColor: b.roof, bottom: (b.heightM * scale)+'px' }"></div>
+        
         <div v-if="b.type !== 'flat'" class="door"></div>
         <div v-if="b.type === 'house'" class="window square icon-window"></div>
         <div v-if="b.type === 'shop'" class="window wide shop-window"></div>
-        <div v-if="b.win === 'grid'" class="grid-windows"></div>
-        <div v-if="b.win === 'glass'" class="glass-windows"></div>
+        
+        <div v-if="b.type === 'flat' && b.win === 'grid'" class="grid-windows"></div>
+        <div v-if="b.type === 'flat' && b.win === 'glass'" class="glass-windows"></div>
+        <div v-if="b.type === 'flat' && b.win === 'normal'" class="mid-windows"></div>
       </div>
     </div>
 
@@ -101,31 +161,27 @@ const nearBuildings = [
 </template>
 
 <style scoped>
+/* スタイルは変更なし（そのまま利用） */
 .city-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: 0; }
 .sky { position: absolute; top: 0; left: 0; width: 100%; height: 80%; background: linear-gradient(to bottom, #87CEEB 0%, #E0F7FA 100%); z-index: 0; }
 
-/* --- ★追加: 太陽 --- */
 .sun {
   position: absolute;
   top: 50px; right: 50px;
   width: 80px; height: 80px;
   background: radial-gradient(circle, #ffd54f 40%, #ffca28 100%);
   border-radius: 50%;
-  box-shadow: 0 0 40px rgba(255, 213, 79, 0.6), 0 0 80px rgba(255, 213, 79, 0.3); /* 光彩 */
+  box-shadow: 0 0 40px rgba(255, 213, 79, 0.6), 0 0 80px rgba(255, 213, 79, 0.3);
   z-index: 0;
 }
 
-/* --- ★追加: 雲 --- */
 .cloud-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
 .cloud {
   position: absolute;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 50px;
-  /* 雲のアニメーション */
   animation: floatCloud 60s linear infinite;
 }
-
-/* 雲の形を作る（モコモコさせる） */
 .cloud::after, .cloud::before {
   content: '';
   position: absolute;
@@ -133,52 +189,29 @@ const nearBuildings = [
   border-radius: 50%;
 }
 
-/* 雲1 (大きめ) */
-.c1 {
-  top: 80px; left: -150px; /* 画面外からスタート */
-  width: 120px; height: 40px;
-  animation-duration: 180s; /* 流れる速さ */
-}
+.c1 { top: 80px; left: -150px; width: 120px; height: 40px; animation-duration: 180s; }
 .c1::after { width: 50px; height: 50px; top: -25px; left: 20px; }
 .c1::before { width: 40px; height: 40px; top: -15px; left: 60px; }
 
-/* 雲2 (小さめ) */
-.c2 {
-  top: 150px; left: -100px;
-  width: 80px; height: 30px;
-  opacity: 0.7;
-  animation-duration: 120s; /* 遅めに */
-  animation-delay: -20s; /* 途中から開始 */
-}
+.c2 { top: 150px; left: -100px; width: 80px; height: 30px; opacity: 0.7; animation-duration: 120s; animation-delay: -20s; }
 .c2::after { width: 35px; height: 35px; top: -18px; left: 10px; }
 .c2::before { width: 25px; height: 25px; top: -10px; left: 40px; }
 
-/* 雲3 */
-.c3 {
-  top: 40px; left: -120px;
-  width: 100px; height: 35px;
-  opacity: 0.6;
-  animation-duration: 80s; /* 速めに */
-  animation-delay: -10s;
-}
+.c3 { top: 40px; left: -120px; width: 100px; height: 35px; opacity: 0.6; animation-duration: 90s; animation-delay: -10s; }
 .c3::after { width: 45px; height: 45px; top: -20px; left: 15px; }
 .c3::before { width: 35px; height: 35px; top: -10px; left: 50px; }
 
-/* 雲のアニメーション定義: 画面左から右へ流れる */
 @keyframes floatCloud {
   0% { transform: translateX(0); }
-  100% { transform: translateX(120vw); } /* 画面幅より少し広く移動 */
+  100% { transform: translateX(120vw); }
 }
 
-/* --- レイヤー共通 --- */
 .layer { position: absolute; left: 0; width: 100%; height: 100%; pointer-events: none; }
 .building { position: absolute; bottom: 0; transition: all 0.5s ease-out; }
 
-/* --- 山 (SVG) --- */
 .mountain-layer { position: absolute; bottom: 25px; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
 .mountain-svg { position: absolute; bottom: 0; transition: all 0.5s ease-out; }
 
-/* --- 以下、ビルのスタイルは変更なし --- */
 .far-layer { bottom: 25px; z-index: 3; }
 .far { background-color: #90a4ae; border: 1px solid #78909c; border-bottom: none; opacity: 0.9; }
 

@@ -9,76 +9,55 @@ defineProps({
 })
 
 // --- ユーティリティ: ランダム生成用関数 ---
-// 最小値と最大値の間のランダムな数を返す
 const random = (min, max) => Math.random() * (max - min) + min
-// 最小値と最大値の間のランダムな整数を返す
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
-// 配列からランダムに1つ選ぶ
 const randomPick = (arr) => arr[Math.floor(Math.random() * arr.length)]
 
 // --- 1. 山 (自動生成: 15個) ---
-const mountainColors = ['#1b5e20', // かなり深い緑
-  '#2e7d32', // 濃い緑
-  '#43a047', // 普通の緑
-  '#689f38', // オリーブっぽい緑
-  '#7cb342', // 草色
-  '#8bc34a', // 黄緑
-  '#9ccc65'  // 明るい黄緑
-]
-// Array.from({ length: 15 }) で15個のデータを作成
+const mountainColors = ['#1b5e20', '#2e7d32', '#43a047', '#689f38', '#7cb342', '#8bc34a', '#9ccc65']
 const mountains = Array.from({ length: 15 }).map((_, i) => ({
   id: `m-${i}`,
-  heightM: random(300, 800), // 高さを300m〜800mの間でランダムに
-  widthM: random(500, 1200), // 幅をランダムに
+  heightM: random(300, 800),
+  widthM: random(500, 1200),
   color: randomPick(mountainColors),
-  left: `${random(-20, 100)}%`, // 画面外の左(-20%)から右(100%)までランダム配置
+  left: `${random(-20, 100)}%`,
   zIndex: randomInt(1, 3)
-})).sort((a, b) => a.heightM - b.heightM) // 低い山を手前にするためにソート（お好みで）
+})).sort((a, b) => a.heightM - b.heightM)
 
-// --- 2. 遠景の摩天楼 (自動生成: 50個) ---
-const farBuildings = Array.from({ length: 50 }).map((_, i) => ({
-  id: `f-${i}`,
-  heightM: random(200, 450),
-  widthM: random(40, 80),
-  left: `${random(0, 100)}%`,
-  zIndex: randomInt(1, 5) // 奥の中で多少前後させる
-}))
-
-// --- 3. 中景のオフィスビル (自動生成: 35個) ---
-const midColors = ['#b0bec5', '#cfd8dc', '#90a4ae']
-const midBuildings = Array.from({ length: 35 }).map((_, i) => ({
+// --- 3. 中景のオフィスビル (自動生成: 50個に増量) ---
+// 摩天楼を消した分、こちらの数を増やし、高さのバリエーションを広げました
+const midColors = ['#90a4ae', '#b0bec5', '#cfd8dc', '#78909c'] // 色味も少し濃い目を追加
+const midBuildings = Array.from({ length: 150 }).map((_, i) => ({
   id: `md-${i}`,
-  heightM: random(120, 250),
-  widthM: random(50, 100),
-  left: `${random(0, 100)}%`,
-  color: randomPick(midColors)
-}))
+  heightM: random(50, 250), // 高さの幅を広げました (低い雑居ビル〜そこそこのビル)
+  widthM: random(30, 90),
+  left: `${random(-10, 110)}%`, // 画面端までしっかり配置
+  color: randomPick(midColors),
+  zIndex: randomInt(4, 6) // 重なり順をランダムに
+})).sort((a, b) => a.heightM - b.heightM) // 奥から手前へ並べ替え
 
 // --- 4. 近景の住宅・商店 (自動生成: 45個) ---
 const nearColors = ['#ffcc80', '#ef5350', '#81d4fa', '#fff59d', '#a5d6a7', '#ffab91', '#b39ddb', '#90caf9']
 const roofColors = ['#c62828', '#fbc02d', '#388e3c', '#d84315', '#5e35b1', '#e65100', '#1565c0']
-const types = ['flat', 'shop', 'house', 'house', 'flat'] // house多めに設定
+const types = ['flat', 'shop', 'house', 'house', 'flat']
 
-const nearBuildings = Array.from({ length: 45 }).map((_, i) => {
+const nearBuildings = Array.from({ length: 80 }).map((_, i) => {
   const type = randomPick(types)
-  // 画面全体に散らばるようにベース位置を決めて、少し揺らぎ(jitter)を与える
-  const baseLeft = (i / 45) * 100
+  const baseLeft = (i / 80) * 100
   const jitter = random(-2, 2)
   
   return {
     id: `n-${i}`,
     type: type,
-    heightM: type === 'flat' ? random(40, 100) : random(10, 30), // ビルなら高く、家なら低く
+    heightM: type === 'flat' ? random(40, 100) : random(10, 30),
     widthM: random(20, 45),
     left: `${Math.max(0, Math.min(100, baseLeft + jitter))}%`,
     color: randomPick(nearColors),
-    roof: randomPick(roofColors), // 屋根の色
-    win: randomPick(['grid', 'glass', 'normal']), // 窓タイプ
+    roof: randomPick(roofColors),
+    win: randomPick(['grid', 'glass', 'normal']),
     zIndex: randomInt(10, 20)
   }
-})
-// 手前の小さい順、あるいはランダムに並び替えて、自然な重なりを作る
-.sort(() => Math.random() - 0.5)
+}).sort(() => Math.random() - 0.5)
 
 </script>
 
@@ -105,19 +84,6 @@ const nearBuildings = Array.from({ length: 45 }).map((_, i) => {
       </svg>
     </div>
 
-    <div class="layer far-layer">
-      <div 
-        v-for="b in farBuildings" :key="b.id" 
-        class="building far" 
-        :style="{ 
-          height: (b.heightM * scale)+'px', 
-          width: (b.widthM * scale)+'px', 
-          left: b.left,
-          zIndex: b.zIndex
-        }"
-      ></div>
-    </div>
-
     <div class="layer mid-layer">
       <div 
         v-for="b in midBuildings" :key="b.id" 
@@ -126,7 +92,8 @@ const nearBuildings = Array.from({ length: 45 }).map((_, i) => {
           height: (b.heightM * scale)+'px', 
           width: (b.widthM * scale)+'px', 
           left: b.left, 
-          backgroundColor: b.color 
+          backgroundColor: b.color,
+          zIndex: b.zIndex
         }"
       ><div class="mid-windows"></div></div>
     </div>
@@ -161,7 +128,6 @@ const nearBuildings = Array.from({ length: 45 }).map((_, i) => {
 </template>
 
 <style scoped>
-/* スタイルは変更なし（そのまま利用） */
 .city-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; z-index: 0; }
 .sky { position: absolute; top: 0; left: 0; width: 100%; height: 80%; background: linear-gradient(to bottom, #87CEEB 0%, #E0F7FA 100%); z-index: 0; }
 
@@ -212,8 +178,7 @@ const nearBuildings = Array.from({ length: 45 }).map((_, i) => {
 .mountain-layer { position: absolute; bottom: 25px; left: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; }
 .mountain-svg { position: absolute; bottom: 0; transition: all 0.5s ease-out; }
 
-.far-layer { bottom: 25px; z-index: 3; }
-.far { background-color: #90a4ae; border: 1px solid #78909c; border-bottom: none; opacity: 0.9; }
+/* ★修正: .far-layer, .far のスタイルを削除しました */
 
 .mid-layer { bottom: 20px; z-index: 5; }
 .mid { border: 1px solid rgba(0,0,0,0.1); border-bottom: none; }

@@ -23,7 +23,7 @@ const COMPARISON_MASTER = [
   { name: "東京タワー", heightM: 333.0, imgUrl: "/images/tokyo_tower.png" },
   { name: "スカイツリー", heightM: 634.0, imgUrl: "/images/skytree.png" },
   { name: "富士山", heightM: 3776.0, imgUrl: "/images/fuji.png" },
-  { name: "エベレスト", heightM: 8848.0, imgUrl: "/images/everest.png", offsetRatio: 0.12 }
+  { name: "エベレスト", heightM: 8848.0, imgUrl: "/images/everest.png"}
 ]
 
 onMounted(async () => {
@@ -49,7 +49,7 @@ onMounted(async () => {
   }
 })
 
-// --- カメラ倍率計算 ---
+// --- カメラ倍率計算 (添付ファイルのまま) ---
 const pixelPerMeter = computed(() => {
   if (!result.value) return 10
   const h = result.value.height_m
@@ -58,7 +58,7 @@ const pixelPerMeter = computed(() => {
   return STAGE_HEIGHT_PX / viewHeightMeters
 })
 
-// 比較対象の自動選択
+// 比較対象の自動選択 (添付ファイルのまま)
 const closestComparison = computed(() => {
   if (!result.value) return COMPARISON_MASTER[0]
   const h = result.value.height_m
@@ -90,8 +90,18 @@ const goBack = () => router.push('/')
             
             <div class="comparison-container">
               
+              <ComparisonObject 
+                :height-px="closestComparison.heightM * pixelPerMeter"
+                :img-url="closestComparison.imgUrl"
+                :name="closestComparison.name"
+                class="comp-obj"
+                :style="{ 
+                  transform: `translateY(${ (closestComparison.heightM * pixelPerMeter) * (closestComparison.offsetRatio || 0) }px)`
+                }"
+              />
+
               <div 
-                class="dimension-box" 
+                class="dimension-box right-pos" 
                 :style="{ height: (closestComparison.heightM * pixelPerMeter) + 'px' }"
               >
                 <div class="dim-line" :style="{ bottom: ARROW_BOTTOM_OFFSET + 'px' }"></div>
@@ -102,15 +112,6 @@ const goBack = () => router.push('/')
                 <div class="dim-label">{{ closestComparison.heightM.toLocaleString() }}m</div>
               </div>
 
-              <ComparisonObject 
-                :height-px="closestComparison.heightM * pixelPerMeter"
-                :img-url="closestComparison.imgUrl"
-                :name="closestComparison.name"
-                class="comp-obj"
-                :style="{ 
-                  transform: `translateY(${ (closestComparison.heightM * pixelPerMeter) * (closestComparison.offsetRatio || 0) }px)`
-                }"
-              />
             </div>
 
             <div class="snowman-container">
@@ -130,7 +131,7 @@ const goBack = () => router.push('/')
               </div>
 
               <SnowmanSvg 
-                :height-px="((result.height_m * pixelPerMeter) + 25)/ VISUAL_RATIO" 
+                :height-px="((result.height_m * pixelPerMeter) +25)/ VISUAL_RATIO" 
                 :style="{ 
                   transform: `translateY(${ ((result.height_m * pixelPerMeter) / VISUAL_RATIO) * BOTTOM_OFFSET_RATIO }px)` 
                 }"
@@ -226,14 +227,21 @@ h1 { color: #e65100; margin: 0; font-size: 2rem; }
   /* スタイルはインラインで制御 */
 }
 
-/* --- 寸法線 (共通設定) --- */
+/* --- 寸法線 (共通設定: 左配置用) --- */
 .dimension-box {
   position: relative;
   width: 0px; 
-  margin-right: -45px; 
+  margin-right: -45px; /* 左配置時に画像に寄せる設定 */
   z-index: 20; 
   transition: all 0.5s ease-out;
 }
+
+/* ★追加: 右配置用のスタイル上書き */
+.dimension-box.right-pos {
+  margin-right: 0;   /* 左用のマイナスマージンをリセット */
+  margin-left: 5px;  /* 画像の右側に少し隙間を空けて配置 */
+}
+
 .dim-line { position: absolute; top: 0; bottom: 0; left: 10px; width: 2px; background-color: #ffffff; box-shadow: 1px 0 2px rgba(0,0,0,0.3); }
 .dim-bar-top, .dim-bar-bottom { position: absolute; left: 11px; transform: translateX(-50%); width: 20px; height: 2px; background-color: #ffffff; z-index: 5; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
 .dim-bar-top { top: 0; }

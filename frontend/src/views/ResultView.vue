@@ -78,7 +78,7 @@ const closestComparison = computed(() => {
   })
 })
 
-const goBack = () => router.push('/')
+const goBack = () => router.push('/home')
 </script>
 
 <template>

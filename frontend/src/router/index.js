@@ -5,6 +5,7 @@ import LoginView from '../views/LoginView.vue'   // スタート画面
 import HomeView from '../views/HomeView.vue'     // シミュレーション（地図）画面
 import ResultView from '../views/ResultView.vue' // ★結果画面（今回追加）
 import BattleView from '../views/BattleView.vue' // バトル設定画面
+import BattleResultView from '../views/BattleResultView.vue' // バトル結果画面（仮）
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -39,7 +40,7 @@ const router = createRouter({
       // まだファイルがない場合は HomeView などを仮置きしておきます
       path: '/battle-result',
       name: 'battle-result',
-      component: HomeView 
+      component: BattleResultView 
     }
   ]
 })

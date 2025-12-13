@@ -33,15 +33,25 @@ onMounted(async () => {
     isLoading.value = false
     return
   }
+  
   try {
-    const response = await fetch('http://localhost:8000/calculate', {
+    const waitPromise = new Promise(resolve => setTimeout(resolve, 5000))
+
+    const apiPromise = fetch('http://localhost:8000/calculate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prefecture_id: parseInt(pref), target_date: date, period_type: type })
     })
+
+    const [_, response] = await Promise.all([waitPromise, apiPromise])
+
     const data = await response.json()
-    if (data.error) errorMsg.value = data.error
-    else result.value = data
+    
+    if (data.error) {
+      errorMsg.value = data.error
+    } else {
+      result.value = data
+    }
   } catch (e) {
     errorMsg.value = "通信エラー"
   } finally {
@@ -49,7 +59,7 @@ onMounted(async () => {
   }
 })
 
-// --- カメラ倍率計算 (添付ファイルのまま) ---
+// --- カメラ倍率計算 ---
 const pixelPerMeter = computed(() => {
   if (!result.value) return 10
   const h = result.value.height_m
@@ -58,7 +68,7 @@ const pixelPerMeter = computed(() => {
   return STAGE_HEIGHT_PX / viewHeightMeters
 })
 
-// 比較対象の自動選択 (添付ファイルのまま)
+// 比較対象の自動選択
 const closestComparison = computed(() => {
   if (!result.value) return COMPARISON_MASTER[0]
   const h = result.value.height_m
@@ -72,7 +82,16 @@ const goBack = () => router.push('/')
 
 <template>
   <div class="result-page">
-    <div v-if="isLoading" class="loading-view"><div class="spinner">❄️</div><h2>作成中...</h2></div>
+    <div v-if="isLoading" class="loading-view">
+      
+      <h2 class="loading-text">作成中...</h2>
+      
+      <video autoplay muted loop playsinline class="loading-video">
+        <source src="/973_1280x720.mp4" type="video/mp4">
+      </video>
+      
+    </div>
+    
     <div v-else-if="errorMsg" class="error-view"><h2>エラー</h2><p>{{ errorMsg }}</p><button class="back-btn" @click="goBack">戻る</button></div>
 
     <div v-else-if="result" class="content-view">
@@ -157,9 +176,50 @@ const goBack = () => router.push('/')
 .result-page { min-height: 100vh; background: linear-gradient(to bottom, #e1f5fe, #fff); display: flex; flex-direction: column; align-items: center; padding: 20px; font-family: sans-serif; color: #333; }
 .content-view { width: 100%; max-width: 900px; animation: slideIn 0.5s ease-out; }
 @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-.loading-view { margin-top: 100px; text-align: center; color: #0288d1; }
-.spinner { font-size: 4rem; display: inline-block; animation: spin 1.5s infinite linear; margin-bottom: 20px; }
-@keyframes spin { 100% { transform: rotate(360deg); } }
+
+/* --- ローディング画面 --- */
+.loading-view { 
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  z-index: 9999;
+  background-color: #fff; /* 背景白 */
+  
+  display: flex;
+  flex-direction: column; 
+  justify-content: center;
+  align-items: center;
+}
+
+.loading-text {
+  position: relative;
+  margin-bottom: 20px;
+  color: #1d055e; 
+  font-size: 2rem;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  animation: pulse 1.5s infinite;
+}
+
+.loading-video {
+  position: relative;
+  width: 80%;          
+  max-width: 1000px;   
+  height: auto;
+  
+  /* ★修正: 枠線と影を削除しました */
+  /* border-radius: 12px; */
+  /* box-shadow: 0 4px 15px rgba(0,0,0,0.1); */
+  
+  object-fit: cover;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
 .header-area { text-align: center; margin-bottom: 20px; }
 h1 { color: #e65100; margin: 0; font-size: 2rem; }
 .pref-msg { background: white; display: inline-block; padding: 8px 20px; border-radius: 20px; margin-top: 10px; font-weight: bold; color: #0277bd; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -222,24 +282,22 @@ h1 { color: #e65100; margin: 0; font-size: 2rem; }
   flex-shrink: 0; 
 }
 
-/* 画像や雪だるま本体 */
 .comp-obj {
   /* スタイルはインラインで制御 */
 }
 
-/* --- 寸法線 (共通設定: 左配置用) --- */
+/* --- 寸法線 --- */
 .dimension-box {
   position: relative;
   width: 0px; 
-  margin-right: -45px; /* 左配置時に画像に寄せる設定 */
+  margin-right: -45px; 
   z-index: 20; 
   transition: all 0.5s ease-out;
 }
 
-/* ★追加: 右配置用のスタイル上書き */
 .dimension-box.right-pos {
-  margin-right: 0;   /* 左用のマイナスマージンをリセット */
-  margin-left: 5px;  /* 画像の右側に少し隙間を空けて配置 */
+  margin-right: 0;   
+  margin-left: 5px;  
 }
 
 .dim-line { position: absolute; top: 0; bottom: 0; left: 10px; width: 2px; background-color: #ffffff; box-shadow: 1px 0 2px rgba(0,0,0,0.3); }
@@ -249,7 +307,6 @@ h1 { color: #e65100; margin: 0; font-size: 2rem; }
 .dim-arrow-bottom { position: absolute; bottom: 0; left: 11px; transform: translateX(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 10px solid #ffffff; }
 .dim-label { position: absolute; top: 50%; left: 10px; transform: translate(-50%, -50%); background-color: rgba(0, 0, 0, 0.7); color: #ffffff; border: 1px solid #ffffff; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 1rem; white-space: nowrap; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10; }
 
-/* --- 統計表示 --- */
 .stats-box { display: flex; justify-content: center; gap: 40px; margin-bottom: 30px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 .stat-item { display: flex; flex-direction: column; align-items: center; }
 .sub { font-size: 0.8rem; color: #888; }

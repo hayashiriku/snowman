@@ -88,8 +88,8 @@ const isSelected = (day) => {
     <div class="header">
       <button class="nav-btn" @click="addMonth(-1)">‹</button>
       <div class="current-month">
-        <span class="label year-label">{{ year }}年</span>
-        <span class="label month-label">{{ month }}月</span>
+        <span class="label year-label" @click="trigger('year')">{{ year }}年</span>
+        <span class="label month-label" @click="trigger('month')">{{ month }}月</span>
       </div>
       <button class="nav-btn" @click="addMonth(1)">›</button>
     </div>

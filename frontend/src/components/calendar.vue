@@ -1,20 +1,36 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 const props = defineProps({
-  modelValue: Date // 親から受け取る日付
+  modelValue: Date, // 親から受け取る日付
+  prefId: Number    // 親から受け取る県ID
 })
 
 const emit = defineEmits(['update:modelValue', 'search'])
 
-// 内部で管理する表示用年月
 const displayDate = ref(new Date(props.modelValue || new Date()))
 
-// 年・月・日を取得
+// データ状態を管理するオブジェクト
+// 例: { "2024-02-01": "positive", "2024-02-02": "zero" }
+const availableDates = ref({})
+
+onMounted(async () => {
+  try {
+    // 親から県IDが渡されていない場合はAPIを叩かない（エラー防止）
+    if (!props.prefId) return
+
+    const res = await fetch(`http://localhost:8000/available_dates?pref_id=${props.prefId}`)
+    if (res.ok) {
+      availableDates.value = await res.json()
+    }
+  } catch (e) {
+    console.error("日付データの取得に失敗しました", e)
+  }
+})
+
 const year = computed(() => displayDate.value.getFullYear())
 const month = computed(() => displayDate.value.getMonth() + 1)
 
-// カレンダー生成ロジック
 const calendarDays = computed(() => {
   const year = displayDate.value.getFullYear()
   const month = displayDate.value.getMonth()
@@ -22,164 +38,217 @@ const calendarDays = computed(() => {
   const firstDayOfWeek = new Date(year, month, 1).getDay()
   
   const days = []
-  // 空白埋め
   for (let i = 0; i < firstDayOfWeek; i++) days.push(null)
-  // 日付埋め
   for (let i = 1; i <= lastDay; i++) days.push(i)
   return days
 })
 
-// --- アクション ---
+const getDataStatus = (day) => {
+  if (!day) return null
+  const y = displayDate.value.getFullYear()
+  const m = String(displayDate.value.getMonth() + 1).padStart(2, '0')
+  const d = String(day).padStart(2, '0')
+  const dateStr = `${y}-${m}-${d}`
+  
+  return availableDates.value[dateStr]
+}
 
-// 月移動
 const addMonth = (n) => {
   const d = new Date(displayDate.value)
   d.setMonth(d.getMonth() + n)
   displayDate.value = d
 }
 
-// 共通: 親に変更を伝える関数
 const trigger = (type, day = null) => {
   const d = new Date(displayDate.value)
   if (day) d.setDate(day)
-  
-  // 親のv-modelを更新
   emit('update:modelValue', d)
-  
-  // 「どのモードで検索するか」を通知
-  // type: 'year' | 'month' | 'day'
   emit('search', type)
 }
 
-// 判定用: 選択中の日付か？
+const isToday = (day) => {
+  if (!day) return false
+  const d = new Date()
+  return d.getFullYear() === displayDate.value.getFullYear() &&
+         d.getMonth() === displayDate.value.getMonth() &&
+         d.getDate() === day
+}
+
 const isSelected = (day) => {
   if (!day || !props.modelValue) return false
-  const p = props.modelValue
-  const d = displayDate.value
-  return p.getDate() === day && p.getMonth() === d.getMonth() && p.getFullYear() === d.getFullYear()
+  const d = new Date(props.modelValue)
+  return d.getFullYear() === displayDate.value.getFullYear() &&
+         d.getMonth() === displayDate.value.getMonth() &&
+         d.getDate() === day
 }
 </script>
 
 <template>
-  <div class="calendar-card">
+  <div class="calendar-container">
     <div class="header">
-      <button class="nav-btn" @click="addMonth(-1)">&lt;</button>
-      
-      <div class="date-labels">
-        <span class="label year-label" @click="trigger('year')">
-          {{ year }}年
-          <span class="tooltip">年間降雪量</span>
-        </span>
+      <button class="nav-btn" @click="addMonth(-1)">‹</button>
+      <div class="current-month">
+        <span class="label year-label">{{ year }}年</span>
+        <span class="label month-label">{{ month }}月</span>
+      </div>
+      <button class="nav-btn" @click="addMonth(1)">›</button>
+    </div>
+
+    <div class="weekdays">
+      <span v-for="w in ['日','月','火','水','木','金','土']" :key="w" :class="{ 'sunday': w==='日', 'saturday': w==='土' }">{{ w }}</span>
+    </div>
+
+    <div class="calendar-grid">
+      <div v-for="(day, index) in calendarDays" :key="index" 
+           class="day-cell" 
+           :class="{ 
+             'empty': !day, 
+             'today': isToday(day),
+             'selected': isSelected(day),
+             'clickable': day
+           }"
+           @click="day && trigger('day', day)">
         
-        <span class="label month-label" @click="trigger('month')">
-          {{ month }}月
-          <span class="tooltip">月間降雪量</span>
-        </span>
-      </div>
-
-      <button class="nav-btn" @click="addMonth(1)">&gt;</button>
-    </div>
-
-    <div class="grid weeks">
-      <span class="sun">日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span class="sat">土</span>
-    </div>
-
-    <div class="grid days">
-      <div 
-        v-for="(day, idx) in calendarDays" 
-        :key="idx"
-        class="day-cell"
-        :class="{ 'empty': !day, 'selected': isSelected(day) }"
-        @click="day && trigger('day', day)"
-      >
-        {{ day }}
+        <span class="day-num">{{ day }}</span>
+        
+        <div 
+          v-if="getDataStatus(day)" 
+          class="data-dot" 
+          :class="getDataStatus(day)"
+        ></div>
+        
       </div>
     </div>
+    
+    <div class="calendar-legend">
+      <div class="legend-item">
+        <span class="legend-dot positive"></span>
+        <span>作れる日</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-dot zero"></span>
+        <span>雪不足</span>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <style scoped>
-.calendar-card {
-  background: white;
+.calendar-container {
+  background: #fff;
   border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-  border: 1px solid #eee;
-  width: 100%;
-  max-width: 320px;
-  margin: 0 auto;
+  overflow: hidden;
+  font-family: sans-serif;
   user-select: none;
+  padding-bottom: 15px; /* 下部余白を少し増やす */
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 10px;
 }
-
-.date-labels {
+.current-month {
   display: flex;
   gap: 10px;
-  font-size: 1.2rem;
+  font-size: 1.2rem; 
   font-weight: bold;
 }
-
-/* 年と月のラベル (クリック可能に見せる) */
-.label {
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background 0.2s;
-  position: relative; /* ツールチップ用 */
-}
-.year-label:hover { background: #e3f2fd; color: #0288d1; }
-.month-label:hover { background: #e8f5e9; color: #2e7d32; }
-
-/* ホバー時に出るツールチップ */
-.tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.7rem;
-  background: rgba(0,0,0,0.8);
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  opacity: 0;
-  transition: opacity 0.2s;
-  pointer-events: none;
-  white-space: nowrap;
-}
-.label:hover .tooltip { opacity: 1; }
-
+.label { cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background 0.2s; }
+.label:hover { background: #f5f5f5; }
 .nav-btn {
   background: #f5f5f5; border: none;
   width: 30px; height: 30px; border-radius: 50%;
   cursor: pointer; font-weight: bold; color: #666;
+  transition: background 0.2s;
 }
 .nav-btn:hover { background: #e0e0e0; }
 
-.grid {
+.weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   text-align: center;
-  gap: 5px;
+  font-size: 0.8rem; 
+  color: #888;
+  margin-bottom: 5px;
+  margin-top: 5px;
 }
-.weeks { margin-bottom: 10px; font-size: 0.85rem; color: #888; font-weight: bold; }
-.sun { color: #e57373; }
-.sat { color: #64b5f6; }
+.sunday { color: #e57373; }
+.saturday { color: #64b5f6; }
 
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  margin-bottom: 15px; /* 説明との間隔をあける */
+}
 .day-cell {
-  height: 36px;
-  display: flex; align-items: center; justify-content: center;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 0.95rem;
-  transition: 0.2s;
+  font-weight: bold;
+  color: #333;
+  transition: all 0.2s;
+  position: relative;
 }
-.day-cell:not(.empty):hover { background: #e0f7fa; color: #006064; }
-.day-cell.selected { background: #0288d1; color: white; font-weight: bold; }
+.day-cell:hover:not(.empty) {
+  background-color: #fce4ec;
+  color: #e91e63;
+}
 .empty { cursor: default; }
+
+.today { border: 2px solid #e65100; color: #e65100; }
+
+.selected {
+  background-color: #e65100 !important;
+  color: white !important;
+  box-shadow: 0 4px 10px rgba(230, 81, 0, 0.4);
+}
+.selected .data-dot { background-color: white !important; }
+
+/* 点のスタイル */
+.data-dot {
+  width: 5px; 
+  height: 5px;
+  border-radius: 50%;
+  margin-top: 2px; 
+}
+.data-dot.positive { background-color: #e65100; }
+.data-dot.zero { background-color: #039be5; }
+
+/* ★追加: 凡例のスタイル */
+.calendar-legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: #666;
+  background-color: #f9f9f9; /* 少し背景色をつけてエリアを分ける */
+  padding: 8px;
+  border-radius: 8px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.legend-dot.positive { background-color: #e65100; }
+.legend-dot.zero { background-color: #039be5; }
 </style>

@@ -5,6 +5,7 @@ from sqlmodel import Session, select, func
 import math
 from datetime import date
 from create_database.database import get_session, DailySnow, MonthlySnow, Prefecture
+from sqlalchemy import distinct
 
 app = FastAPI()
 
@@ -43,6 +44,33 @@ def calculate_snowman_height(snow_cm, area_km2):
 def get_prefectures(session: Session = Depends(get_session)):
     statement = select(Prefecture).order_by(Prefecture.id)
     return session.exec(statement).all()
+
+# backend/main.py
+
+# ★引数に pref_id: int を追加
+@app.get("/available_dates")
+def get_available_dates(pref_id: int, session: Session = Depends(get_session)):
+    
+    # ★重要: .filter(DailySnow.prefecture_id == pref_id) を追加して絞り込む
+    # ※モデルの列名が 'prefecture_id' か 'point_id' かは環境に合わせてください
+    records = session.query(DailySnow.date, DailySnow.avg_depth)\
+                     .filter(DailySnow.prefecture_id == pref_id)\
+                     .all()
+    
+    date_status = {}
+
+    for r in records:
+        d_str = r.date.isoformat()
+        
+        if date_status.get(d_str) == "positive":
+            continue
+
+        if r.avg_depth > 0:
+            date_status[d_str] = "positive"
+        else:
+            date_status[d_str] = "zero"
+            
+    return date_status
 
 @app.post("/calculate")
 def calc_snow(req: SnowRequest, session: Session = Depends(get_session)):

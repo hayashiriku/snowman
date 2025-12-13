@@ -59,7 +59,7 @@ const handleSearch = (type) => {
         <p class="guide-text">クリックすると結果画面へ移動します👇</p>
         
         <div class="calendar-wrapper">
-          <SmartCalendar v-model="targetDate" @search="handleSearch" />
+          <SmartCalendar v-model="targetDate" :prefId="selectedPref.id" @search="handleSearch" />
         </div>
       </div>
     </div>
@@ -71,7 +71,7 @@ const handleSearch = (type) => {
 h1 { color: #0288d1; }
 header { margin-bottom: 20px; margin-top: 20px; }
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 999; animation: fadeIn 0.3s; }
-.modal-content { background: white; padding: 25px; border-radius: 20px; width: 95%; max-width: 500px; position: relative; animation: popUp 0.4s; }
+.modal-content { background: white; padding: 10px; border-radius: 20px; width: 95%; max-width: 500px; position: relative; animation: popUp 0.4s; }
 .close-btn { position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 2rem; color: #aaa; cursor: pointer; }
 .modal-header { text-align: center; margin-bottom: 15px; }
 .guide-text { font-size: 0.9rem; color: #666; margin-bottom: 15px; }

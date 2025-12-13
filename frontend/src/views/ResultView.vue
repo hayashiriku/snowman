@@ -35,7 +35,7 @@ onMounted(async () => {
   }
   
   try {
-    const waitPromise = new Promise(resolve => setTimeout(resolve, 5000))
+    const waitPromise = new Promise(resolve => setTimeout(resolve, 5000)) // 5秒待機
 
     const apiPromise = fetch('http://localhost:8000/calculate', {
       method: 'POST',
@@ -44,7 +44,6 @@ onMounted(async () => {
     })
 
     const [_, response] = await Promise.all([waitPromise, apiPromise])
-
     const data = await response.json()
     
     if (data.error) {
@@ -63,6 +62,8 @@ onMounted(async () => {
 const pixelPerMeter = computed(() => {
   if (!result.value) return 10
   const h = result.value.height_m
+  if (h === 0) return 10 
+  
   const visualHeightM = h / VISUAL_RATIO
   const viewHeightMeters = Math.max(visualHeightM * 1.2, 3.0)
   return STAGE_HEIGHT_PX / viewHeightMeters
@@ -82,17 +83,36 @@ const goBack = () => router.push('/')
 
 <template>
   <div class="result-page">
+    
     <div v-if="isLoading" class="loading-view">
-      
       <h2 class="loading-text">作成中...</h2>
-      
       <video autoplay muted loop playsinline class="loading-video">
         <source src="/973_1280x720.mp4" type="video/mp4">
       </video>
-      
     </div>
     
-    <div v-else-if="errorMsg" class="error-view"><h2>エラー</h2><p>{{ errorMsg }}</p><button class="back-btn" @click="goBack">戻る</button></div>
+    <div v-else-if="errorMsg" class="error-view">
+      <h2>エラー</h2>
+      <p>{{ errorMsg }}</p>
+      <button class="back-btn" @click="goBack">戻る</button>
+    </div>
+
+    <div v-else-if="result && result.height_m === 0" class="zero-view">
+      <div class="zero-content">
+        <h1>☔️ 残念...</h1>
+        <p class="zero-msg">
+          雪が足りなかったため、<br>
+          雪だるまを作成できませんでした😭
+        </p>
+        
+        <div class="zero-snowman">
+          <img src="/melted_snowman.svg" alt="Sad Snowman" class="zero-img" />
+        </div>
+
+        <p class="zero-sub">別の場所や日付で試してみてね！</p>
+        <button class="back-btn" @click="goBack">もう一度トライ</button>
+      </div>
+    </div>
 
     <div v-else-if="result" class="content-view">
       <div class="header-area">
@@ -104,11 +124,9 @@ const goBack = () => router.push('/')
         <CityBackground :scale="pixelPerMeter / VISUAL_RATIO" />
 
         <div class="scroll-container">
-          
           <div class="main-figures-wrapper">
             
             <div class="comparison-container">
-              
               <ComparisonObject 
                 :height-px="closestComparison.heightM * pixelPerMeter"
                 :img-url="closestComparison.imgUrl"
@@ -118,7 +136,6 @@ const goBack = () => router.push('/')
                   transform: `translateY(${ (closestComparison.heightM * pixelPerMeter) * (closestComparison.offsetRatio || 0) }px)`
                 }"
               />
-
               <div 
                 class="dimension-box right-pos" 
                 :style="{ height: (closestComparison.heightM * pixelPerMeter) + 'px' }"
@@ -130,16 +147,12 @@ const goBack = () => router.push('/')
                 <div class="dim-bar-bottom" :style="{ bottom: ARROW_BOTTOM_OFFSET + 'px' }"></div>
                 <div class="dim-label">{{ closestComparison.heightM.toLocaleString() }}m</div>
               </div>
-
             </div>
 
             <div class="snowman-container">
-
               <div 
                 class="dimension-box" 
-                :style="{ 
-                  height: (result.height_m * pixelPerMeter) + 'px',
-                }"
+                :style="{ height: (result.height_m * pixelPerMeter) + 'px' }"
               >
                 <div class="dim-line" :style="{ bottom: ARROW_BOTTOM_OFFSET + 'px' }"></div>
                 <div class="dim-bar-top"></div>
@@ -150,12 +163,11 @@ const goBack = () => router.push('/')
               </div>
 
               <SnowmanSvg 
-                :height-px="((result.height_m * pixelPerMeter) +25)/ VISUAL_RATIO" 
+                :height-px="((result.height_m * pixelPerMeter) + 25) / VISUAL_RATIO" 
                 :style="{ 
                   transform: `translateY(${ ((result.height_m * pixelPerMeter) / VISUAL_RATIO) * BOTTOM_OFFSET_RATIO }px)` 
                 }"
               />
-              
             </div>
 
           </div>
@@ -177,54 +189,82 @@ const goBack = () => router.push('/')
 .content-view { width: 100%; max-width: 900px; animation: slideIn 0.5s ease-out; }
 @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-/* --- ローディング画面 --- */
+/* ローディング画面 */
 .loading-view { 
   position: fixed;
   top: 0; left: 0;
   width: 100vw; height: 100vh;
   z-index: 9999;
-  background-color: #fff; /* 背景白 */
-  
+  background-color: #fff;
   display: flex;
   flex-direction: column; 
   justify-content: center;
   align-items: center;
 }
-
 .loading-text {
   position: relative;
   margin-bottom: 20px;
-  color: #1d055e; 
+  color: #07117d; 
   font-size: 2rem;
   font-weight: bold;
   letter-spacing: 0.1em;
   animation: pulse 1.5s infinite;
 }
-
 .loading-video {
   position: relative;
   width: 80%;          
   max-width: 1000px;   
   height: auto;
-  
-  /* ★修正: 枠線と影を削除しました */
-  /* border-radius: 12px; */
-  /* box-shadow: 0 4px 15px rgba(0,0,0,0.1); */
-  
   object-fit: cover;
 }
-
 @keyframes pulse {
   0% { opacity: 0.6; }
   50% { opacity: 1; }
   100% { opacity: 0.6; }
 }
 
+/* 残念画面 (高さ0m) */
+.zero-view {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80vh;
+  text-align: center;
+  animation: slideIn 0.5s ease-out;
+}
+.zero-content {
+  background: rgb(218, 246, 255);
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  max-width: 500px;
+  width: 100%; 
+}
+.zero-view h1 { color: #546e7a; margin-bottom: 20px; }
+.zero-msg { font-size: 1.2rem; color: #333; margin-bottom: 10px; line-height: 1.6; }
+
+/* コンテナ */
+.zero-snowman {
+  margin: 20px auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 140px; 
+}
+/* ★追加: SVG画像のスタイル */
+.zero-img {
+  height: 100%; /* 親の高さ(140px)いっぱいに表示 */
+  width: auto;  /* 幅は自動調整 */
+}
+
+.zero-sub { color: #888; margin-bottom: 30px; font-size: 0.9rem; }
+
+/* 共通パーツ */
 .header-area { text-align: center; margin-bottom: 20px; }
 h1 { color: #e65100; margin: 0; font-size: 2rem; }
 .pref-msg { background: white; display: inline-block; padding: 8px 20px; border-radius: 20px; margin-top: 10px; font-weight: bold; color: #0277bd; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
 
-/* --- ステージ全体のレイアウト --- */
+/* ステージ */
 .visual-stage {
   position: relative; 
   width: 100%; 
@@ -236,7 +276,6 @@ h1 { color: #e65100; margin: 0; font-size: 2rem; }
   background-color: #E0F7FA; 
   box-shadow: 0 10px 20px rgba(0,0,0,0.15);
 }
-
 .scroll-container {
   position: absolute;
   top: 0; left: 0;
@@ -247,7 +286,6 @@ h1 { color: #e65100; margin: 0; font-size: 2rem; }
   display: flex;
   align-items: flex-end; 
 }
-
 .main-figures-wrapper {
   position: relative;
   z-index: 10;
@@ -255,38 +293,23 @@ h1 { color: #e65100; margin: 0; font-size: 2rem; }
   min-width: 100%; 
   width: fit-content; 
   height: 100%;
-  
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  
   padding: 0 50px; 
   box-sizing: border-box; 
   gap: 80px; 
 }
-
-/* 比較対象コンテナ */
-.comparison-container {
+.comparison-container, .snowman-container {
   position: relative;
   display: flex;
   align-items: flex-end; 
   flex-shrink: 0; 
-  margin-right: 30px; 
 }
+.comparison-container { margin-right: 30px; }
+.comp-obj { /* style inline */ }
 
-/* 雪だるまコンテナ */
-.snowman-container {
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-  flex-shrink: 0; 
-}
-
-.comp-obj {
-  /* スタイルはインラインで制御 */
-}
-
-/* --- 寸法線 --- */
+/* 寸法線 */
 .dimension-box {
   position: relative;
   width: 0px; 
@@ -294,11 +317,7 @@ h1 { color: #e65100; margin: 0; font-size: 2rem; }
   z-index: 20; 
   transition: all 0.5s ease-out;
 }
-
-.dimension-box.right-pos {
-  margin-right: 0;   
-  margin-left: 5px;  
-}
+.dimension-box.right-pos { margin-right: 0; margin-left: 5px; }
 
 .dim-line { position: absolute; top: 0; bottom: 0; left: 10px; width: 2px; background-color: #ffffff; box-shadow: 1px 0 2px rgba(0,0,0,0.3); }
 .dim-bar-top, .dim-bar-bottom { position: absolute; left: 11px; transform: translateX(-50%); width: 20px; height: 2px; background-color: #ffffff; z-index: 5; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }

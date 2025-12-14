@@ -10,6 +10,9 @@ import snowmanImg from '/snowman.svg'
 const route = useRoute()
 const router = useRouter()
 
+// ★ BGMプレイヤーの参照
+const bgmPlayer = ref(null)
+
 // パラメータ取得
 const p1Data = computed(() => ({
   name: route.query.p1_name || 'Player 1',
@@ -28,16 +31,15 @@ const p2Data = computed(() => ({
 // バトル状態管理
 const battleState = ref('ready') 
 const winner = ref(null)
-// ★追加: 開始演出用ステップ (0:なし, 1:READY, 2:FIGHT)
-const introStep = ref(0)
+const introStep = ref(0) // 0:なし, 1:READY, 2:FIGHT
 
-// HP (スケーリング後の整数値)
+// HP
 const p1Hp = ref(0)
 const p2Hp = ref(0)
 const p1MaxHp = ref(1) 
 const p2MaxHp = ref(1)
 
-// 実体積（データ保持用）
+// 実体積
 const p1RealVolume = ref(0)
 const p2RealVolume = ref(0)
 
@@ -50,20 +52,45 @@ const logMessage = ref('データを取得中...')
 const p1Weapon = ref(null)
 const p2Weapon = ref(null)
 
-// 武器名ポップアップ用 (攻撃時のみ表示)
+// 武器名ポップアップ
 const currentWeaponNameP1 = ref('')
 const currentWeaponNameP2 = ref('')
 
 // ==========================================
-// 武器リスト
+// 武器リスト (SFXパスを追加)
+// ※パスは public フォルダからの絶対パスにしています
 // ==========================================
 const weaponList = [
-  { name: '弓', power: 1000, icon: '/weapon/311747.svg' },
-  { name: '三叉槍', power: 300, icon: '/weapon/151565.svg' },
-  { name: '手裏剣', power: 500, icon: '/weapon/153172.svg' },
-  { name: '剣', power: 1500, icon: '/weapon/310793.svg' },
-  { name: 'ライフル', power: 3000, icon: '/weapon/308095.svg' } 
+  { name: '弓', power: 1000, icon: '/weapon/311747.svg', sfx: '/BGM/47042.mp3' },
+  { name: '三叉槍', power: 300, icon: '/weapon/151565.svg', sfx: '/BGM/151565.mp3' },
+  { name: '手裏剣', power: 500, icon: '/weapon/153172.svg', sfx: '/BGM/153172.mp3' },
+  { name: '剣', power: 1500, icon: '/weapon/310793.svg', sfx: '/BGM/310793.mp3' },
+  { name: 'ライフル', power: 3000, icon: '/weapon/308095.svg', sfx: '/BGM/308095.mp3' } 
 ]
+
+// ==========================================
+// 効果音再生機能 (ワンショット再生用)
+// ==========================================
+const playSe = (path, timeLimitSec = null) => {
+  if (!path) return null;
+  try {
+    const audio = new Audio()
+    audio.volume = 0.5 
+
+    audio.onloadedmetadata = () => {
+      const duration = audio.duration 
+      if (timeLimitSec && duration > timeLimitSec) {
+        audio.playbackRate = duration / timeLimitSec
+      }
+      audio.play().catch(e => console.warn('SE再生エラー:', e))
+    }
+    audio.src = path
+    return audio
+  } catch (e) {
+    console.error('Audio error:', e)
+    return null
+  }
+}
 
 const detectType = (label) => {
   if (label.includes('日')) return 'day'
@@ -137,20 +164,29 @@ const startBattleSequence = async () => {
   p2Weapon.value = weaponList[Math.floor(Math.random() * weaponList.length)]
   
   logMessage.value = `武器決定！ ${p1Weapon.value.name} vs ${p2Weapon.value.name}`
-  await sleep(2000) // 武器を見せる時間
+  await sleep(2000) 
 
-  // ★ここで READY... FIGHT! 演出を入れる
+  // Ready... FIGHT! 演出
   logMessage.value = '' 
-  
   introStep.value = 1 // READY
-  await sleep(1500) // READY表示時間
+  await sleep(1500) 
 
   introStep.value = 2 // FIGHT!
-  await sleep(1000) // FIGHT表示時間
+  
+  // FIGHT音声 (1秒に短縮再生)
+  playSe('/BGM/bell.mp3', 1.0)
+  
+  await sleep(1000) 
   
   introStep.value = 0 // 演出終了
   battleState.value = 'fighting'
   logMessage.value = 'BATTLE START!'
+
+  // ★ BGM再生開始
+  if (bgmPlayer.value) {
+    bgmPlayer.value.volume = 0.3 // BGMは少し控えめ
+    bgmPlayer.value.play().catch(e => console.warn('BGM Auto-play blocked', e))
+  }
 
   // バトルループ
   while (p1Hp.value > 0 && p2Hp.value > 0) {
@@ -179,6 +215,11 @@ const performAttack = async (attacker) => {
 
   await sleep(300) 
 
+  // ★ 武器の効果音再生
+  if (weapon.sfx) {
+    playSe(weapon.sfx)
+  }
+
   const damage = weapon.power
 
   if (attacker === 1) {
@@ -200,6 +241,16 @@ const performAttack = async (attacker) => {
 
 const finishBattle = () => {
   battleState.value = 'finished'
+
+  // ★ BGM停止
+  if (bgmPlayer.value) {
+    bgmPlayer.value.pause()
+    bgmPlayer.value.currentTime = 0
+  }
+  
+  // 結果発表音
+  playSe('/BGM/fanfare.mp3')
+
   if (p1Hp.value <= 0 && p2Hp.value <= 0) {
     winner.value = 0 // 引き分け
     logMessage.value = '勝負あり！'
@@ -209,7 +260,7 @@ const finishBattle = () => {
   }
 }
 
-// スケール計算ロジック
+// スケール計算
 const getScale = (battleHp) => {
   if (battleHp <= 0) return 0.5
   const logVal = Math.log10(battleHp)
@@ -230,6 +281,8 @@ const goTop = () => router.push('/')
 
 <template>
   <SnowEffect />
+
+  <audio ref="bgmPlayer" src="/BGM/BattleBGM.mp3" loop hidden></audio>
   
   <div class="battle-result-container">
     <OceanBackground />
@@ -500,7 +553,7 @@ const goTop = () => router.push('/')
 }
 
 /* =======================================
-   ★ READY... FIGHT! 演出
+   READY... FIGHT! 演出
    ======================================= */
 .intro-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;

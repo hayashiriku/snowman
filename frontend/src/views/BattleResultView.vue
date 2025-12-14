@@ -4,7 +4,6 @@ import { useRoute, useRouter } from 'vue-router'
 
 // 共通コンポーネント
 import SnowEffect from '../components/Snoweffect.vue'
-import OceanBackground from '../components/oceanbackground.vue'
 import snowmanImg from '/snowman.svg'
 
 const route = useRoute()
@@ -57,19 +56,18 @@ const currentWeaponNameP1 = ref('')
 const currentWeaponNameP2 = ref('')
 
 // ==========================================
-// 武器リスト (SFXパスを追加)
-// ※パスは public フォルダからの絶対パスにしています
+// 武器リスト
 // ==========================================
 const weaponList = [
-  { name: '弓', power: 1000, icon: '/weapon/311747.svg', sfx: '/BGM/47042.mp3' },
+  { name: '弓', power: 750, icon: '/weapon/311747.svg', sfx: '/BGM/3117747.mp3' },
   { name: '三叉槍', power: 300, icon: '/weapon/151565.svg', sfx: '/BGM/151565.mp3' },
   { name: '手裏剣', power: 500, icon: '/weapon/153172.svg', sfx: '/BGM/153172.mp3' },
-  { name: '剣', power: 1500, icon: '/weapon/310793.svg', sfx: '/BGM/310793.mp3' },
-  { name: 'ライフル', power: 3000, icon: '/weapon/308095.svg', sfx: '/BGM/308095.mp3' } 
+  { name: '剣', power: 1000, icon: '/weapon/310793.svg', sfx: '/BGM/310793.mp3' },
+  { name: 'ライフル', power: 1500, icon: '/weapon/308095.svg', sfx: '/BGM/308095.mp3' } 
 ]
 
 // ==========================================
-// 効果音再生機能 (ワンショット再生用)
+// 効果音再生機能
 // ==========================================
 const playSe = (path, timeLimitSec = null) => {
   if (!path) return null;
@@ -182,9 +180,9 @@ const startBattleSequence = async () => {
   battleState.value = 'fighting'
   logMessage.value = 'BATTLE START!'
 
-  // ★ BGM再生開始
+  // BGM再生開始
   if (bgmPlayer.value) {
-    bgmPlayer.value.volume = 0.3 // BGMは少し控えめ
+    bgmPlayer.value.volume = 0.3 
     bgmPlayer.value.play().catch(e => console.warn('BGM Auto-play blocked', e))
   }
 
@@ -215,7 +213,7 @@ const performAttack = async (attacker) => {
 
   await sleep(300) 
 
-  // ★ 武器の効果音再生
+  // 武器の効果音再生
   if (weapon.sfx) {
     playSe(weapon.sfx)
   }
@@ -242,7 +240,7 @@ const performAttack = async (attacker) => {
 const finishBattle = () => {
   battleState.value = 'finished'
 
-  // ★ BGM停止
+  // BGM停止
   if (bgmPlayer.value) {
     bgmPlayer.value.pause()
     bgmPlayer.value.currentTime = 0
@@ -285,8 +283,8 @@ const goTop = () => router.push('/')
   <audio ref="bgmPlayer" src="/BGM/BattleBGM.mp3" loop hidden></audio>
   
   <div class="battle-result-container">
-    <OceanBackground />
-
+    <div class="battle-background-image"></div>
+    
     <div class="header-status-bar">
       <div class="player-status-block p1-block">
         <div class="info-text">
@@ -414,6 +412,20 @@ const goTop = () => router.push('/')
   padding-bottom: 50px;
 }
 
+.battle-background-image {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1; 
+    /* 背景画像を assets ではなく public フォルダから読むように修正 */
+    background-image: url('/stage1.png'); 
+    background-size: cover; 
+    background-position: center bottom;
+    background-repeat: no-repeat;
+} 
+
 /* =======================================
    HP & ステータスバー
    ======================================= */
@@ -482,6 +494,9 @@ const goTop = () => router.push('/')
   align-items: flex-end; 
   padding-bottom: 0px; 
   box-sizing: border-box; overflow: hidden;
+  /* 背景より手前に表示させる */
+  position: relative;
+  z-index: 5;
 }
 
 .player-avatar-area {

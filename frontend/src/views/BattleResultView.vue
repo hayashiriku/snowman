@@ -28,6 +28,8 @@ const p2Data = computed(() => ({
 // バトル状態管理
 const battleState = ref('ready') 
 const winner = ref(null)
+// ★追加: 開始演出用ステップ (0:なし, 1:READY, 2:FIGHT)
+const introStep = ref(0)
 
 // HP (スケーリング後の整数値)
 const p1Hp = ref(0)
@@ -44,7 +46,7 @@ const p1Action = ref('idle')
 const p2Action = ref('idle')
 const logMessage = ref('データを取得中...') 
 
-// ★決定した武器情報
+// 決定した武器情報
 const p1Weapon = ref(null)
 const p2Weapon = ref(null)
 
@@ -53,7 +55,7 @@ const currentWeaponNameP1 = ref('')
 const currentWeaponNameP2 = ref('')
 
 // ==========================================
-// 武器リスト (power をダメージとして使用)
+// 武器リスト
 // ==========================================
 const weaponList = [
   { name: '弓', power: 1000, icon: '/weapon/311747.svg' },
@@ -73,7 +75,6 @@ const detectType = (label) => {
 const fetchSnowData = async (playerData) => {
   try {
     const type = detectType(playerData.label)
-
     const res = await fetch('http://localhost:8000/calculate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -87,18 +88,14 @@ const fetchSnowData = async (playerData) => {
     if (res.ok) {
       const data = await res.json()
       const rawVolume = data.volume_m3 
-
       let divisor = 100000 
       if (type === 'month') divisor = 1500000
       else if (type === 'year') divisor = 5000000
-
       const battleHp = Math.floor(rawVolume / divisor)
-
       return {
         rawVolume: Math.floor(rawVolume), 
         battleHp: Math.max(50, battleHp) 
       }
-
     } else {
       console.error('API Error:', await res.text())
       return { rawVolume: 0, battleHp: 100 }
@@ -135,16 +132,27 @@ const startBattleSequence = async () => {
     return
   }
 
-  // ★ここで武器を決定して固定！
+  // 武器を決定
   p1Weapon.value = weaponList[Math.floor(Math.random() * weaponList.length)]
   p2Weapon.value = weaponList[Math.floor(Math.random() * weaponList.length)]
   
-  logMessage.value = `1P:${p1Weapon.value.name} vs 2P:${p2Weapon.value.name}`
-  await sleep(1500) // 武器決定のログを見せる時間
+  logMessage.value = `武器決定！ ${p1Weapon.value.name} vs ${p2Weapon.value.name}`
+  await sleep(2000) // 武器を見せる時間
 
+  // ★ここで READY... FIGHT! 演出を入れる
+  logMessage.value = '' 
+  
+  introStep.value = 1 // READY
+  await sleep(1500) // READY表示時間
+
+  introStep.value = 2 // FIGHT!
+  await sleep(1000) // FIGHT表示時間
+  
+  introStep.value = 0 // 演出終了
   battleState.value = 'fighting'
   logMessage.value = 'BATTLE START!'
 
+  // バトルループ
   while (p1Hp.value > 0 && p2Hp.value > 0) {
     const isP1Turn = Math.random() > 0.5
     if (isP1Turn) {
@@ -293,6 +301,15 @@ const goTop = () => router.push('/')
     <div class="log-area-container">
       <div class="battle-log-box">
         <p class="log-message">▶ {{ logMessage }}</p>
+      </div>
+    </div>
+
+    <div v-if="introStep > 0" class="intro-overlay">
+      <div v-if="introStep === 1" class="intro-text ready-anim">
+        READY...
+      </div>
+      <div v-if="introStep === 2" class="intro-text fight-anim">
+        FIGHT!
       </div>
     </div>
 
@@ -483,7 +500,56 @@ const goTop = () => router.push('/')
 }
 
 /* =======================================
-   ★ 新・結果ポップアップ (Modal)
+   ★ READY... FIGHT! 演出
+   ======================================= */
+.intro-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.3); /* 少し暗くする */
+  display: flex; justify-content: center; align-items: center;
+  z-index: 300; pointer-events: none;
+}
+
+.intro-text {
+  font-family: 'Arial Black', sans-serif;
+  font-style: italic;
+  font-weight: 900;
+  color: #ffcc00;
+  text-shadow: 5px 5px 0 #d50000, -2px -2px 0 #fff;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* READY: 横からスライドイン & フェードイン */
+.ready-anim {
+  font-size: 5rem;
+  animation: slideInReady 1s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+/* FIGHT: 画面奥から手前にドーン！ */
+.fight-anim {
+  font-size: 8rem;
+  color: #ff5252;
+  text-shadow: 5px 5px 0 #ffcc00, -3px -3px 0 #fff;
+  animation: zoomImpact 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes slideInReady {
+  0% { transform: translateX(-100vw) skewX(-20deg); opacity: 0; }
+  60% { transform: translateX(0) skewX(0deg); opacity: 1; }
+  80% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes zoomImpact {
+  0% { transform: scale(5); opacity: 0; }
+  50% { transform: scale(1); opacity: 1; }
+  70% { transform: scale(1.2) rotate(5deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+
+/* =======================================
+   結果ポップアップ (Modal)
    ======================================= */
 .result-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -504,7 +570,6 @@ const goTop = () => router.push('/')
   transform: scale(0.5);
   animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
   display: flex; flex-direction: column; 
-  /* gapを削除し、個別のmarginで調整 */
 }
 
 /* 勝者に応じたテーマカラー */
@@ -525,39 +590,30 @@ const goTop = () => router.push('/')
   font-size: 2.5rem; font-weight: 900; font-style: italic;
   color: #fff; text-shadow: 0 4px 0 rgba(0,0,0,0.2);
   line-height: 1;
-  margin-bottom: 10px; /* 王冠との間隔 */
+  margin-bottom: 10px;
 }
 
-/* ★ 追加: 王冠コンテナとアイコン */
-.crow-container {
-  margin-bottom: 15px;
-}
+.crow-container { margin-bottom: 15px; }
 .crow-icon {
-  font-size: 4rem;
-  display: inline-block;
-  /* 上下にふわふわ動くアニメーション */
+  font-size: 4rem; display: inline-block;
   animation: bounceIcon 1s infinite alternate ease-in-out;
 }
 
 .result-content {
   background: rgba(255,255,255,0.2);
   padding: 20px; border-radius: 15px;
-  margin-bottom: 25px; /* ボタンとの間隔 */
+  margin-bottom: 25px;
 }
 
 .winner-name {
   font-size: 2rem; font-weight: bold; color: #fff;
   text-shadow: 0 2px 5px rgba(0,0,0,0.3);
-  margin-bottom: 5px; /* 日付との間隔 */
+  margin-bottom: 5px;
 }
 
-/* ★ 追加: 勝者の日付スタイル */
 .winner-date {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: #ffeb3b; /* 黄色系で目立たせる */
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  margin: 0; font-size: 1.1rem; font-weight: bold;
+  color: #ffeb3b; text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
 .result-actions {
@@ -573,7 +629,7 @@ button:hover { transform: translateY(-3px); }
 .top-btn { background: #fff; color: #555; }
 
 
-/* Keyframes */
+/* Keyframes (既存) */
 @keyframes idle-bounce { 0%, 100% { transform: scale(var(--scale, 1.0)) translateY(0); } 50% { transform: scale(var(--scale, 1.0)) translateY(-5px); } }
 @keyframes idle-bounce-flipped { 0%, 100% { transform: scaleX(-1) scale(var(--scale, 1.0)) translateY(0); } 50% { transform: scaleX(-1) scale(var(--scale, 1.0)) translateY(-5px); } }
 @keyframes lunge-right { 0% { transform: scale(var(--scale, 1.0)) translateX(0); } 50% { transform: scale(var(--scale, 1.0)) translateX(80px) rotate(5deg); } 100% { transform: scale(var(--scale, 1.0)) translateX(0); } }
@@ -584,18 +640,8 @@ button:hover { transform: translateY(-3px); }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes floatWeapon { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 @keyframes damage-flash { 0% { filter: sepia(100%) saturate(1000%) hue-rotate(-50deg) drop-shadow(0 0 10px red); } 100% { filter: none; } }
-
-/* ポップアップ用アニメーション */
-@keyframes popIn {
-  0% { transform: scale(0); opacity: 0; }
-  60% { transform: scale(1.1); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-/* 王冠の上下運動用アニメーション */
-@keyframes bounceIcon {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(-15px); }
-}
+@keyframes popIn { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes bounceIcon { 0% { transform: translateY(0); } 100% { transform: translateY(-15px); } }
 
 .snowman-img { --scale: v-bind('getScale(p1MaxHp)'); }
 .p2 .snowman-img { --scale: v-bind('getScale(p2MaxHp)'); }

@@ -7,7 +7,6 @@ import SnowEffect from '../components/Snoweffect.vue'
 import OceanBackground from '../components/oceanbackground.vue'
 import snowmanImg from '/snowman.svg'
 
-
 const route = useRoute()
 const router = useRouter()
 
@@ -158,13 +157,10 @@ const startBattleSequence = async () => {
   finishBattle()
 }
 
-// 攻撃ロジック (ダメージを武器の power に変更し、ログに武器名を追加)
+// 攻撃ロジック
 const performAttack = async (attacker) => {
-  
-  // 決定済みの武器を取得
   const weapon = attacker === 1 ? p1Weapon.value : p2Weapon.value
 
-  // モーションと名前ポップアップ表示
   if (attacker === 1) {
     p1Action.value = 'attack'
     currentWeaponNameP1.value = weapon.name
@@ -175,18 +171,15 @@ const performAttack = async (attacker) => {
 
   await sleep(300) 
 
-  // 武器の power をダメージとして使用
   const damage = weapon.power
 
   if (attacker === 1) {
     p2Action.value = 'damage'
     p2Hp.value = Math.max(0, p2Hp.value - damage)
-    // ★ ログメッセージ修正: {都道府県}が{武器名}で攻撃！〇〇ダメージ！
     logMessage.value = `${p1Data.value.name}が${weapon.name}で攻撃！ ${damage}ダメージ！`
   } else {
     p1Action.value = 'damage'
     p1Hp.value = Math.max(0, p1Hp.value - damage)
-    // ★ ログメッセージ修正: {都道府県}が{武器名}で攻撃！〇〇ダメージ！
     logMessage.value = `${p2Data.value.name}が${weapon.name}で攻撃！ ${damage}ダメージ！`
   }
 
@@ -201,10 +194,10 @@ const finishBattle = () => {
   battleState.value = 'finished'
   if (p1Hp.value <= 0 && p2Hp.value <= 0) {
     winner.value = 0 // 引き分け
-    logMessage.value = '相打ち（引き分け）'
+    logMessage.value = '勝負あり！'
   } else {
     winner.value = p1Hp.value > 0 ? 1 : 2
-    logMessage.value = winner.value === 1 ? `${p1Data.value.name}の勝利！` : `${p2Data.value.name}の勝利！`
+    logMessage.value = '勝負あり！'
   }
 }
 
@@ -212,7 +205,6 @@ const finishBattle = () => {
 const getScale = (battleHp) => {
   if (battleHp <= 0) return 0.5
   const logVal = Math.log10(battleHp)
-  // スケールを控えめにし、最大サイズを抑える (最大 1.5倍 程度)
   const scale = 1.0 + (Math.max(0, logVal - 3) * 0.05) 
   return Math.min(1.5, Math.max(1.0, scale)) 
 }
@@ -235,7 +227,6 @@ const goTop = () => router.push('/')
     <OceanBackground />
 
     <div class="header-status-bar">
-      
       <div class="player-status-block p1-block">
         <div class="info-text">
           <h2 class="pref-name">{{ p1Data.name }}</h2>
@@ -268,7 +259,6 @@ const goTop = () => router.push('/')
     </div>
 
     <div class="avatar-stage">
-        
       <div class="player-avatar-area p1" :class="{ 'loser-shake': battleState === 'finished' && winner === 2 }">
         <div v-if="p1Action === 'attack'" class="weapon-popup red-pop">
           {{ currentWeaponNameP1 }}
@@ -300,22 +290,41 @@ const goTop = () => router.push('/')
       </div>
     </div>
 
-
     <div class="log-area-container">
       <div class="battle-log-box">
         <p class="log-message">▶ {{ logMessage }}</p>
-        <div v-if="battleState === 'finished'" class="final-result">
-           <span v-if="winner === 1" class="winner-text red-text">WINNER: {{ p1Data.name }}</span>
-           <span v-else-if="winner === 2" class="winner-text blue-text">WINNER: {{ p2Data.name }}</span>
-           <span v-else class="winner-text">DRAW</span>
-        </div>
       </div>
     </div>
 
+    <div v-if="battleState === 'finished'" class="result-overlay">
+      <div class="result-card" :class="{'winner-red': winner === 1, 'winner-blue': winner === 2, 'draw-gray': winner === 0}">
+        
+        <div class="result-header">
+          <span v-if="winner === 0">DRAW</span>
+          <span v-else>WINNER!</span>
+        </div>
+        
+        <div v-if="winner !== 0" class="crow-container">
+          <span class="crow-icon">👑</span>
+        </div>
 
-    <div v-if="battleState === 'finished'" class="action-footer">
-      <button @click="goBackBattle" class="retry-btn">⚔️ 再戦する</button>
-      <button @click="goTop" class="top-btn">🏠 TOP</button>
+        <div class="result-content">
+           <div v-if="winner === 1">
+             <div class="winner-name">{{ p1Data.name }}</div>
+             <p class="winner-date">{{ p1Data.label }}</p>
+           </div>
+           <div v-else-if="winner === 2">
+             <div class="winner-name">{{ p2Data.name }}</div>
+             <p class="winner-date">{{ p2Data.label }}</p>
+           </div>
+           <div v-else class="winner-name">引き分け</div>
+        </div>
+
+        <div class="result-actions">
+          <button @click="goBackBattle" class="retry-btn">⚔️ 再戦する</button>
+          <button @click="goTop" class="top-btn">🏠 TOP</button>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -331,12 +340,12 @@ const goTop = () => router.push('/')
   display: flex; flex-direction: column; justify-content: flex-start; 
   align-items: center;
   z-index: 10; overflow: hidden; color: #fff;
-  padding-top: 100px; /* ステータスバーの高さ分を空ける */
-  padding-bottom: 100px; /* ★フッターとログエリアが隠れない最低限のパディングに削減 */
+  padding-top: 100px; 
+  padding-bottom: 50px;
 }
 
 /* =======================================
-   HP & ステータスバー (上部)
+   HP & ステータスバー
    ======================================= */
 .header-status-bar {
   position: fixed; top: 0; left: 0; width: 100%; height: 100px;
@@ -355,9 +364,7 @@ const goTop = () => router.push('/')
 .p2-block { align-items: flex-end; }
 
 .info-text {
-  width: 100%;
-  padding: 0 10px;
-  margin-bottom: 5px;
+  width: 100%; padding: 0 10px; margin-bottom: 5px;
 }
 .p1-block .info-text { text-align: left; }
 .p2-block .info-text { text-align: right; }
@@ -375,7 +382,6 @@ const goTop = () => router.push('/')
   color: #fff; text-shadow: 1px 1px 2px #000;
 }
 
-/* HPバー */
 .hp-bar-container {
   width: 100%; height: 25px;
   background: #444; border-radius: 5px; overflow: hidden;
@@ -387,7 +393,6 @@ const goTop = () => router.push('/')
 .p1-block .hp-bar-container { border-right: none; }
 .p2-block .hp-bar-container { border-left: none; }
 
-/* KO ロゴ */
 .ko-logo {
   position: relative; width: 80px; height: 80px; margin: 0 10px;
   display: flex; justify-content: center; align-items: center;
@@ -399,22 +404,18 @@ const goTop = () => router.push('/')
 .ko-text { font-size: 1.8rem; text-shadow: 1px 1px 2px #000; }
 
 /* =======================================
-   アバターエリア (中央)
+   アバターエリア
    ======================================= */
 .avatar-stage {
-  flex: 1; 
-  width: 100%;
+  flex: 1; width: 100%;
   display: flex; justify-content: space-around;
-  align-items: flex-end; /* 雪だるまを底に配置 */
-  padding-bottom: 0px; /* ★パディングをさらに削減し、雪だるまを上へ */
-  box-sizing: border-box;
-  overflow: hidden; /* ★はみ出し対策 */
+  align-items: flex-end; 
+  padding-bottom: 0px; 
+  box-sizing: border-box; overflow: hidden;
 }
 
 .player-avatar-area {
-  position: relative;
-  width: 45%; 
-  max-width: 300px; /* ★ 300pxに戻して、画面に収まりやすくする */
+  position: relative; width: 45%; max-width: 300px;
   height: auto;
   display: flex; justify-content: center; align-items: flex-end;
   transition: filter 0.5s, transform 0.5s;
@@ -422,36 +423,28 @@ const goTop = () => router.push('/')
 
 .loser-shake {
   animation: shake-loser 1s forwards infinite;
-  opacity: 0.5;
+  opacity: 0.5; filter: grayscale(80%);
 }
 
 .snowman-img {
-  width: 100%; 
-  height: auto; 
-  object-fit: contain;
+  width: 100%; height: auto; object-fit: contain;
   animation: idle-bounce 1.5s infinite ease-in-out; 
   transform-origin: center bottom;
   transition: transform 0.3s, filter 0.3s; 
   position: relative; z-index: 20;
 }
 
-/* 画像の色付けと影 */
 .red-tint { filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.5)); }
 .blue-tint { filter: drop-shadow(0 0 10px rgba(0, 80, 255, 0.5)); }
 .flipped { transform: scaleX(-1); }
 .flipped.idle { animation: idle-bounce-flipped 1.5s infinite ease-in-out; }
 
-/* 攻撃・ダメージアニメーション */
 .p1 .snowman-img.attack { animation: lunge-right 0.3s forwards; }
 .p2 .snowman-img.attack { animation: lunge-left-flipped 0.3s forwards; }
 .damage {
-  /* 揺れる動き(shake) と 色が消える動き(damage-flash) を同時に再生 */
-  animation: 
-    shake-damage 0.4s forwards, 
-    damage-flash 0.6s ease-out forwards !important;
+  animation: shake-damage 0.4s forwards, damage-flash 0.6s ease-out forwards !important;
 }
 
-/* 武器名ポップアップ */
 .weapon-popup {
   position: absolute; top: -50px; left: 50%; transform: translateX(-50%);
   font-weight: bold; font-size: 1.2rem; color: #fff; white-space: nowrap;
@@ -462,83 +455,121 @@ const goTop = () => router.push('/')
 .red-pop { background: #ff5252; box-shadow: 0 4px 10px rgba(255, 0, 0, 0.6); }
 .blue-pop { background: #448aff; box-shadow: 0 4px 10px rgba(0, 0, 255, 0.6); }
 
-/* 装備武器アイコン (手元へ配置・拡大) */
 .equipped-weapon {
-  position: absolute;
-  /* ★ サイズを拡大 */
-  width: 120px; 
-  height: 100px;
-  object-fit: contain;
-  z-index: 30;
+  position: absolute; width: 120px; height: 100px;
+  object-fit: contain; z-index: 30;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
   animation: floatWeapon 2s ease-in-out infinite;
-  /* bottom: 10px; は削除 */
 }
-
-/* P1 (左側) 武器の位置調整 */
-.p1-weapon-icon { 
-    right: -1.5%; /* 右端からの距離を調整 */
-    bottom: 175px; /* 地面からの高さを上げて手元へ */
-    transform: rotate(15deg); /* 少し傾ける */
-} 
-
-/* P2 (右側) 武器の位置調整 */
-.p2-weapon-icon { 
-    left: -1.5%; /* 左端からの距離を調整 */
-    bottom: 175px; /* 地面からの高さを上げて手元へ */
-    /* P2は左右反転した雪だるまに合わせて武器も反転し、傾きを逆にする */
-    transform: scaleX(-1) rotate(-15deg); 
-} 
+.p1-weapon-icon { right: -1.5%; bottom: 175px; transform: rotate(15deg); } 
+.p2-weapon-icon { left: -1.5%; bottom: 175px; transform: scaleX(-1) rotate(-15deg); } 
 
 /* =======================================
-   バトルログ
+   ログエリア
    ======================================= */
 .log-area-container {
-  position: absolute; bottom: 80px; /* フッターの上に配置 */
+  position: absolute; bottom: 30px; 
   width: 90%; max-width: 600px;
-  z-index: 50;
-  display: flex; justify-content: center;
+  z-index: 50; display: flex; justify-content: center;
 }
-
 .battle-log-box {
-  background: rgba(0, 0, 0, 0.7);
-  border: 3px solid #ffcc00;
-  padding: 15px 20px;
-  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.7); border: 3px solid #ffcc00;
+  padding: 10px 20px; border-radius: 10px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-  min-height: 50px;
-  text-align: left;
-  animation: fadeIn 0.5s;
+  min-height: 40px; text-align: left;
 }
-
 .log-message {
-  margin: 0;
-  font-weight: bold; font-size: 1.1rem; color: #fff;
-  text-shadow: 0 1px 2px #000;
+  margin: 0; font-weight: bold; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px #000;
 }
-
-.final-result { margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.3); padding-top: 8px; }
-.winner-text { font-size: 1.5rem; font-weight: 900; letter-spacing: 1px; }
-.red-text { color: #ff5252; }
-.blue-text { color: #448aff; }
 
 /* =======================================
-   フッター (ボタン)
+   ★ 新・結果ポップアップ (Modal)
    ======================================= */
-.action-footer { 
-  position: fixed; bottom: 0; left: 0; width: 100%;
-  padding: 15px; 
-  background: rgba(0, 0, 0, 0.5); 
-  display: flex; gap: 10px; justify-content: center; 
-  z-index: 60; animation: fadeIn 1s; 
-  box-shadow: 0 -5px 15px rgba(0,0,0,0.3);
+.result-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 200;
+  animation: fadeIn 0.3s ease-out;
 }
+
+.result-card {
+  width: 90%; max-width: 400px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  border: 5px solid #fff;
+  transform: scale(0.5);
+  animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  display: flex; flex-direction: column; 
+  /* gapを削除し、個別のmarginで調整 */
+}
+
+/* 勝者に応じたテーマカラー */
+.winner-red {
+  background: linear-gradient(135deg, #d32f2f, #ff5252);
+  border-color: #ff8a80;
+}
+.winner-blue {
+  background: linear-gradient(135deg, #1976d2, #448aff);
+  border-color: #82b1ff;
+}
+.draw-gray {
+  background: linear-gradient(135deg, #616161, #9e9e9e);
+  border-color: #bdbdbd;
+}
+
+.result-header {
+  font-size: 2.5rem; font-weight: 900; font-style: italic;
+  color: #fff; text-shadow: 0 4px 0 rgba(0,0,0,0.2);
+  line-height: 1;
+  margin-bottom: 10px; /* 王冠との間隔 */
+}
+
+/* ★ 追加: 王冠コンテナとアイコン */
+.crow-container {
+  margin-bottom: 15px;
+}
+.crow-icon {
+  font-size: 4rem;
+  display: inline-block;
+  /* 上下にふわふわ動くアニメーション */
+  animation: bounceIcon 1s infinite alternate ease-in-out;
+}
+
+.result-content {
+  background: rgba(255,255,255,0.2);
+  padding: 20px; border-radius: 15px;
+  margin-bottom: 25px; /* ボタンとの間隔 */
+}
+
+.winner-name {
+  font-size: 2rem; font-weight: bold; color: #fff;
+  text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  margin-bottom: 5px; /* 日付との間隔 */
+}
+
+/* ★ 追加: 勝者の日付スタイル */
+.winner-date {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #ffeb3b; /* 黄色系で目立たせる */
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.result-actions {
+  display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+}
+
 button { 
-  padding: 20px 35px; font-size: 1.2rem; border: none; border-radius: 30px; font-weight: bold; cursor: pointer; 
+  padding: 15px 25px; font-size: 1rem; border: none; border-radius: 30px; font-weight: bold; cursor: pointer; 
   box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: transform 0.2s; 
 }
 button:hover { transform: translateY(-3px); }
-.retry-btn { background: #ff9800; color: white; }
+.retry-btn { background: #ffca28; color: #3e2723; }
 .top-btn { background: #fff; color: #555; }
 
 
@@ -551,27 +582,21 @@ button:hover { transform: translateY(-3px); }
 @keyframes shake-loser { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-1deg); } 75% { transform: rotate(1deg); } }
 @keyframes popUpFade { 0% { opacity: 0; transform: translateX(-50%) translateY(10px); } 100% { opacity: 1; transform: translateX(-50%) translateY(0); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes floatWeapon {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+@keyframes floatWeapon { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes damage-flash { 0% { filter: sepia(100%) saturate(1000%) hue-rotate(-50deg) drop-shadow(0 0 10px red); } 100% { filter: none; } }
+
+/* ポップアップ用アニメーション */
+@keyframes popIn {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
-@keyframes damage-flash {
-  0% {
-    /* 攻撃を受けた瞬間：真っ赤に光る */
-    filter: sepia(100%) saturate(1000%) hue-rotate(-50deg) drop-shadow(0 0 10px red);
-  }
-  100% {
-    /* 最後：元の色に戻る */
-    filter: none;
-  }
+/* 王冠の上下運動用アニメーション */
+@keyframes bounceIcon {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-15px); }
 }
 
-.snowman-img {
-    /* getScaleの計算結果をCSS変数として適用 */
-    --scale: v-bind('getScale(p1MaxHp)');
-}
-.p2 .snowman-img {
-    /* p2用にもCSS変数を適用 */
-    --scale: v-bind('getScale(p2MaxHp)');
-}
+.snowman-img { --scale: v-bind('getScale(p1MaxHp)'); }
+.p2 .snowman-img { --scale: v-bind('getScale(p2MaxHp)'); }
 </style>

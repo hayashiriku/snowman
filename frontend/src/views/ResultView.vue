@@ -79,6 +79,8 @@ const closestComparison = computed(() => {
 })
 
 const goBack = () => router.push('/home')
+// ★追加: TOP画面（ログイン画面）へ戻る
+const goTop = () => router.push('/')
 </script>
 
 <template>
@@ -94,7 +96,10 @@ const goBack = () => router.push('/home')
     <div v-else-if="errorMsg" class="error-view">
       <h2>エラー</h2>
       <p>{{ errorMsg }}</p>
-      <button class="back-btn" @click="goBack">戻る</button>
+      <div class="button-group">
+        <button class="back-btn" @click="goBack">戻る</button>
+        <button class="top-btn" @click="goTop">🏠 TOP</button>
+      </div>
     </div>
 
     <div v-else-if="result && result.height_m === 0" class="zero-view">
@@ -110,7 +115,11 @@ const goBack = () => router.push('/home')
         </div>
 
         <p class="zero-sub">別の場所や日付で試してみてね！</p>
-        <button class="back-btn" @click="goBack">もう一度トライ</button>
+        
+        <div class="button-group">
+          <button class="back-btn" @click="goBack">もう一度トライ</button>
+          <button class="top-btn" @click="goTop">🏠 TOP</button>
+        </div>
       </div>
     </div>
 
@@ -179,7 +188,10 @@ const goBack = () => router.push('/home')
         <div class="stat-item"><span class="sub">総体積</span><span class="val">{{ result.volume_m3.toLocaleString() }}</span><span class="unit">m³</span></div>
       </div>
 
-      <button class="back-btn" @click="goBack">もう一度作る</button>
+      <div class="button-group">
+        <button class="back-btn" @click="goBack">もう一度作る</button>
+        <button class="top-btn" @click="goTop">🏠 TOP</button>
+      </div>
     </div>
   </div>
 </template>
@@ -251,10 +263,9 @@ const goBack = () => router.push('/home')
   align-items: center;
   height: 140px; 
 }
-/* ★追加: SVG画像のスタイル */
 .zero-img {
-  height: 100%; /* 親の高さ(140px)いっぱいに表示 */
-  width: auto;  /* 幅は自動調整 */
+  height: 100%;
+  width: auto;
 }
 
 .zero-sub { color: #888; margin-bottom: 30px; font-size: 0.9rem; }
@@ -332,6 +343,30 @@ h1 { color: #e65100; margin: 0; font-size: 2rem; }
 .val { font-size: 1.8rem; font-weight: bold; color: #333; }
 .val.highlight { color: #e65100; }
 .unit { font-size: 1rem; margin-left: 2px; }
-.back-btn { display: block; margin: 0 auto; background: #0288d1; color: white; border: none; padding: 15px 50px; font-size: 1.2rem; font-weight: bold; border-radius: 50px; cursor: pointer; box-shadow: 0 5px 15px rgba(2, 137, 209, 0.4); transition: transform 0.2s; }
+
+/* ★追加: ボタンエリアのスタイル */
+.button-group {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.back-btn { 
+  display: block; 
+  /* margin: 0 auto; は削除またはFlexで無効化 */
+  background: #0288d1; color: white; border: none; padding: 15px 40px; font-size: 1.1rem; font-weight: bold; border-radius: 50px; cursor: pointer; box-shadow: 0 5px 15px rgba(2, 137, 209, 0.4); transition: transform 0.2s; 
+}
 .back-btn:hover { transform: scale(1.05); background: #0277bd; }
+
+/* ★追加: TOPボタンのスタイル */
+.top-btn {
+  display: block;
+  background: #fff; color: #555; border: 2px solid #ddd;
+  padding: 15px 30px; font-size: 1.1rem; font-weight: bold; border-radius: 50px; cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.2s;
+}
+.top-btn:hover { transform: scale(1.05); background: #f9f9f9; }
+
 </style>

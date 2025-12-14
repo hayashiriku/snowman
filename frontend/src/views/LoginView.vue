@@ -5,6 +5,8 @@ import { useRouter } from 'vue-router'
 import SnowEffect from '../components/Snoweffect.vue'
 import OceanBackground from '../components/oceanbackground.vue'
 
+import snowmanImg from '/public/snowman6.png'
+
 const router = useRouter()
 
 // モード選択処理
@@ -26,9 +28,9 @@ const handleStart = (mode) => {
 
     <div class="start-card">
       <div class="icon-area">
-        <span class="snowman-icon">⛄</span>
+        <img :src="snowmanImg" class="snowman-img" alt="雪だるま" />
       </div>
-      <h1>Snowman Simulator</h1>
+      <h1>🌨️雪だるまシミュレーター🌨️</h1>
       <p class="subtitle">遊ぶモードを選んでスタート！</p>
 
       <div class="mode-select-area">
@@ -39,7 +41,7 @@ const handleStart = (mode) => {
         >
           <span class="btn-icon">❄️</span>
           <div class="btn-text">
-            <span class="main-label">Simulation</span>
+            <span class="main-label">シミュレーション</span>
             <span class="sub-label">雪だるまを作る</span>
           </div>
         </button>
@@ -51,7 +53,7 @@ const handleStart = (mode) => {
         >
           <span class="btn-icon">⚔️</span>
           <div class="btn-text">
-            <span class="main-label">Battle Mode</span>
+            <span class="main-label">バトル</span>
             <span class="sub-label">雪合戦で戦う</span>
           </div>
         </button>
@@ -92,10 +94,21 @@ const handleStart = (mode) => {
 }
 
 .icon-area {
-  font-size: 4rem;
-  margin-bottom: 10px;
+  width: 150px;  /* 画像サイズ調整：必要に応じて変更してください */
+  height: 150px; 
+  margin: 0 auto 10px; /* 中央寄せ */
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
-  animation: bounce 2s infinite;
+  animation: bounce 2s infinite; /* フワフワ動くアニメーション */
+  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.snowman-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* 枠内に綺麗に収める */
 }
 
 h1 {
